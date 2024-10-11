@@ -65,9 +65,15 @@ class ELAMDTrainer(object):
         return device
 
     def create_data_loaders(self):
-        train_dataset = ELAMDDataset(self.config, self.config['dir'][self.dataset_name]['train_labels'])
-        valid_dataset = ELAMDDataset(self.config, self.config['dir'][self.dataset_name]['valid_labels'])
-        test_dataset = ELAMDDataset(self.config, self.config['dir'][self.dataset_name]['test_labels'])
+        train_dataset = ELAMDDataset(
+            self.config['dir'][self.dataset_name]['lief_feature_set'], self.config['dir'][self.dataset_name]['train_labels']
+        )
+        valid_dataset = ELAMDDataset(
+            self.config['dir'][self.dataset_name]['lief_feature_set'], self.config['dir'][self.dataset_name]['valid_labels']
+        )
+        test_dataset = ELAMDDataset(
+            self.config['dir'][self.dataset_name]['lief_feature_set'], self.config['dir'][self.dataset_name]['test_labels']
+        )
 
         train_loader = DataLoader(train_dataset, batch_size=model_config['batch_size'], collate_fn=collate_fn)
         valid_loader = DataLoader(valid_dataset, batch_size=model_config['batch_size'], collate_fn=collate_fn)

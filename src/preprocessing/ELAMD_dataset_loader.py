@@ -9,9 +9,20 @@ from torch.utils.data import Dataset
 
 
 class ELAMDDataset(Dataset):
-    def __init__(self, csv_file):
-        self.data = pd.read_csv(csv_file)
-        self.features = self.data.drop(['file_path', 'label'], axis=1)
+    def __init__(self, lief_features_dir, labels_file):
+        # Load features
+        feature_csv = os.listdir(lief_features_dir)
+        self.features_df = pd.read_csv(os.path.join(lief_features_dir, feature_csv))
+        self.features_df.set_index('file_name', inplace=True)
+
+        # Load set (train/valid/test)
+        self.labels_file_df = pd.read_csv(labels_file)
+
+        # Merge features and labels
+        self.data = self.labels_file_df.merge(self.features_df, left_on='filename', right_index=True, how='inner')
+
+        # Separate features and labels
+        self.features = self.data.drop(['filename', 'label'], axis=1)
         self.labels = self.data['label']
 
     def __len__(self):
@@ -22,6 +33,7 @@ class ELAMDDataset(Dataset):
         label = self.labels.iloc[idx]
 
         return torch.tensor(features), torch.tensor(label, dtype=torch.long)
+
 
 def collate_fn(batch):
     features = torch.stack([item[0] for item in batch])

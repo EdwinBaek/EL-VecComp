@@ -62,9 +62,9 @@ class ELVecCompTrainer(object):
         return device
 
     def create_data_loaders(self):
-        train_dataset = EnsembleDataset(self.config, self.config['dir'][self.dataset_name]['train_labels'])
-        valid_dataset = EnsembleDataset(self.config, self.config['dir'][self.dataset_name]['valid_labels'])
-        test_dataset = EnsembleDataset(self.config, self.config['dir'][self.dataset_name]['test_labels'])
+        train_dataset = ELVecCompDataset(self.config, self.config['dir'][self.dataset_name]['train_labels'])
+        valid_dataset = ELVecCompDataset(self.config, self.config['dir'][self.dataset_name]['valid_labels'])
+        test_dataset = ELVecCompDataset(self.config, self.config['dir'][self.dataset_name]['test_labels'])
 
         train_loader = DataLoader(train_dataset, batch_size=self.config['hyperparams']['batch_size'], collate_fn=collate_fn)
         valid_loader = DataLoader(valid_dataset, batch_size=self.config['hyperparams']['batch_size'], collate_fn=collate_fn)
