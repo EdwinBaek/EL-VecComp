@@ -1,8 +1,19 @@
 import os
 import lief
+import logging
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
+
+logging.getLogger('lief').setLevel(logging.ERROR)
+
+def is_pe_file(file_path):
+    try:
+        with open(file_path, 'rb') as f:
+            return f.read(2) == b'MZ'
+    except:
+        return False
+
 
 def extract_features(file_path):
     features = {
@@ -15,7 +26,9 @@ def extract_features(file_path):
         'sections_mean_entropy': 0,
         'sections_min_entropy': 0,
         'sections_max_entropy': 0,
-        'number_of_imports': 0
+        'number_of_imports': 0,
+        'has_relocation_table': 0,
+        'has_resource_table': 0
     }
 
     try:
@@ -37,36 +50,59 @@ def extract_features(file_path):
             entropy_values.append(entropy)
         features['byte_entropy'] = np.histogram(entropy_values, bins=256, range=(0,8))[0]
 
-        # LIEF parsing
-        pe = lief.parse(file_path)
-        if pe is None:
-            print(f"LIEF failed to parse {file_path}")
+        if not is_pe_file(file_path):
+            print(f"{file_path} is not a PE file")
             return features
 
-        # Header info
-        if hasattr(pe, 'header'):
-            if hasattr(pe.header, 'numberof_sections'):
-                features['number_of_sections'] = pe.header.numberof_sections
-            elif hasattr(pe.header, 'numberOfSections'):
-                features['number_of_sections'] = pe.header.numberOfSections
+        # Try LIEF parsing
+        try:
+            pe = lief.parse(file_path)
+            if pe is not None:
+                if hasattr(pe, 'header'):
+                    if hasattr(pe.header, 'numberof_sections'):
+                        features['number_of_sections'] = pe.header.numberof_sections
+                    elif hasattr(pe.header, 'numberOfSections'):
+                        features['number_of_sections'] = pe.header.numberOfSections
 
-            if hasattr(pe.header, 'time_date_stamps'):
-                features['timestamp'] = pe.header.time_date_stamps
+                    if hasattr(pe.header, 'time_date_stamps'):
+                        features['timestamp'] = pe.header.time_date_stamps
 
-        # Section info
-        if pe.sections:
-            section_entropies = [s.entropy for s in pe.sections]
-            features['sections_mean_entropy'] = np.mean(section_entropies)
-            features['sections_min_entropy'] = np.min(section_entropies)
-            features['sections_max_entropy'] = np.max(section_entropies)
+                if pe.sections:
+                    section_entropies = [s.entropy for s in pe.sections]
+                    features['sections_mean_entropy'] = np.mean(section_entropies)
+                    features['sections_min_entropy'] = np.min(section_entropies)
+                    features['sections_max_entropy'] = np.max(section_entropies)
 
-        # Import info
-        features['number_of_imports'] = sum(len(lib.entries) for lib in pe.imports)
+                if hasattr(pe, 'imports'):
+                    features['number_of_imports'] = sum(len(lib.entries) for lib in pe.imports)
+
+                features['has_relocation_table'] = int(pe.has_relocations)
+                features['has_resource_table'] = int(pe.has_resources)
+            else:
+                raise Exception("LIEF parsing failed")
+        except:
+            # If LIEF fails, try pefile
+            try:
+                pe = pefile.PE(file_path)
+                features['number_of_sections'] = pe.FILE_HEADER.NumberOfSections
+                features['timestamp'] = pe.FILE_HEADER.TimeDateStamp
+                features['number_of_imports'] = sum(len(entry.imports) for entry in pe.DIRECTORY_ENTRY_IMPORT) if hasattr(pe, 'DIRECTORY_ENTRY_IMPORT') else 0
+                features['has_relocation_table'] = int(hasattr(pe, 'DIRECTORY_ENTRY_BASERELOC'))
+                features['has_resource_table'] = int(hasattr(pe, 'DIRECTORY_ENTRY_RESOURCE'))
+
+                if hasattr(pe, 'sections'):
+                    section_entropies = [section.get_entropy() for section in pe.sections]
+                    features['sections_mean_entropy'] = np.mean(section_entropies)
+                    features['sections_min_entropy'] = np.min(section_entropies)
+                    features['sections_max_entropy'] = np.max(section_entropies)
+            except:
+                print(f"Both LIEF and pefile failed to parse {file_path}")
 
     except Exception as e:
         print(f"Unexpected error for {file_path}: {str(e)}")
 
     return features
+
 
 def main(pe_directory, output_dir, label_files=[]):
     if not os.path.exists(output_dir):

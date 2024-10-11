@@ -11,8 +11,7 @@ from torch.utils.data import Dataset
 class ELAMDDataset(Dataset):
     def __init__(self, lief_features_dir, labels_file):
         # Load features
-        feature_csv = os.listdir(lief_features_dir)
-        self.features_df = pd.read_csv(os.path.join(lief_features_dir, feature_csv))
+        self.features_df = pd.read_csv(os.path.join(lief_features_dir, 'lief_features.csv'))
         self.features_df.set_index('file_name', inplace=True)
 
         # Load set (train/valid/test)

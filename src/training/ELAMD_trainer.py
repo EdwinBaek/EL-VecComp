@@ -9,10 +9,11 @@ from torch import optim
 from torch.utils.data import DataLoader
 from sklearn.ensemble import RandomForestClassifier, IsolationForest
 from ..preprocessing.ELAMD_dataset_loader import ELAMDDataset, collate_fn
-from ..models import MLP, DeepSVDD, SemiDeepSVDD
+from ..models.MLP import MLP
+from ..models.DeepSVDD import DeepSVDD
+from ..models.SemiDeepSVDD import SemiDeepSVDD
 from ..models.ELAMD import ELAMD, ELAMD_AnomalyDetection, MetaLearner
 from ..utils.tools import EarlyStopping, adjust_learning_rate, visual
-
 
 # Load global configuration yaml file
 with open('./src/training/config/ELAMD_config.yaml', 'r') as file:
@@ -48,7 +49,13 @@ class ELAMDTrainer(object):
         meta_learner = MetaLearner(len(individual_learners) * 2)
 
         if model_config['use_anomaly_detection']:
-            anomaly_detector = self.anomaly_detectors[model_config['anomaly_detector']]()
+            AnomalyDetectorClass = self.anomaly_detectors[model_config['anomaly_detector']]
+            if issubclass(AnomalyDetectorClass, nn.Module):
+                # For DeepSVDD and SemiDeepSVDD
+                anomaly_detector = AnomalyDetectorClass(input_size=len(individual_learners) * 2)
+            else:
+                # For IsolationForest
+                anomaly_detector = AnomalyDetectorClass()
             model = ELAMD_AnomalyDetection(individual_learners, meta_learner, anomaly_detector)
         else:
             model = ELAMD(individual_learners, meta_learner)
@@ -66,13 +73,13 @@ class ELAMDTrainer(object):
 
     def create_data_loaders(self):
         train_dataset = ELAMDDataset(
-            self.config['dir'][self.dataset_name]['lief_feature_set'], self.config['dir'][self.dataset_name]['train_labels']
+            self.config['dir'][self.dataset_name]['lief_features'], self.config['dir'][self.dataset_name]['train_labels']
         )
         valid_dataset = ELAMDDataset(
-            self.config['dir'][self.dataset_name]['lief_feature_set'], self.config['dir'][self.dataset_name]['valid_labels']
+            self.config['dir'][self.dataset_name]['lief_features'], self.config['dir'][self.dataset_name]['valid_labels']
         )
         test_dataset = ELAMDDataset(
-            self.config['dir'][self.dataset_name]['lief_feature_set'], self.config['dir'][self.dataset_name]['test_labels']
+            self.config['dir'][self.dataset_name]['lief_features'], self.config['dir'][self.dataset_name]['test_labels']
         )
 
         train_loader = DataLoader(train_dataset, batch_size=model_config['batch_size'], collate_fn=collate_fn)
@@ -122,7 +129,8 @@ class ELAMDTrainer(object):
     def evaluate(self, data_loader):
         self.model.eval()
         total_loss = 0.0
-        correct, total = 0, 0
+        all_predictions = []
+        all_labels = []
         with torch.no_grad():
             for batch_x, batch_y in data_loader:
                 batch_x = [x.to(self.device) for x in batch_x]
@@ -131,21 +139,36 @@ class ELAMDTrainer(object):
                 loss = self.criterion(outputs, batch_y)
                 total_loss += loss.item()
                 _, predicted = torch.max(outputs.data, 1)
-                total += batch_y.size(0)
-                correct += (predicted == batch_y).sum().item()
-        return total_loss / len(data_loader), correct / total
+                all_predictions.extend(predicted.cpu().numpy())
+                all_labels.extend(batch_y.cpu().numpy())
+
+        metrics = self.calculate_metrics(all_labels, all_predictions)
+        return total_loss / len(data_loader), metrics
+
+    def calculate_metrics(self, true_labels, predictions):
+        return {
+            'accuracy': accuracy_score(true_labels, predictions),
+            'precision': precision_score(true_labels, predictions, average='weighted'),
+            'recall': recall_score(true_labels, predictions, average='weighted'),
+            'f1': f1_score(true_labels, predictions, average='weighted'),
+        }
 
     def test(self, data_loader):
         print("=" * 20 + f" START TEST " + "=" * 20)
         self.model.eval()
         predictions = []
+        true_labels = []
         with torch.no_grad():
-            for batch_x, _ in data_loader:
+            for batch_x, batch_y in data_loader:
                 batch_x = [x.to(self.device) for x in batch_x]
                 outputs = self.model(batch_x)
                 _, predicted = torch.max(outputs.data, 1)
                 predictions.extend(predicted.cpu().numpy())
-        return predictions
+                true_labels.extend(batch_y.numpy())
+
+        metrics = self.calculate_metrics(true_labels, predictions)
+        print("Test Metrics:", metrics)
+        return predictions, metrics
 
 
 def main(config):

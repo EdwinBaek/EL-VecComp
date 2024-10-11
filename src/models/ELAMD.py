@@ -42,26 +42,23 @@ class MetaLearner(nn.Module):
         return self.model(x)
 
 
-class ELAMD:
-    def __init__(self, feature_types, input_sizes):
-        self.individual_learners = [IndividualLearner(ft, is_) for ft, is_ in zip(feature_types, input_sizes)]
-        self.meta_learner = MetaLearner(len(self.individual_learners) * 2)
+class ELAMD(nn.Module):
+    def __init__(self, individual_learners, meta_learner):
+        super(ELAMD, self).__init__()
+        self.individual_learners = individual_learners
+        self.meta_learner = meta_learner
 
-    def fit(self, X_list, y):
-        # Train individual learners
-        for learner, X in zip(self.individual_learners, X_list):
-            learner.fit(X, y)
+    def forward(self, x):
+        individual_outputs = []
+        for learner in self.individual_learners:
+            if isinstance(learner, nn.Module):
+                output = learner(x)
+            else:
+                output = torch.tensor(learner.predict_proba(x.cpu().numpy()), device=x.device)
+            individual_outputs.append(output)
 
-        # Generate meta-features
-        meta_features = []
-        for learner, X in zip(self.individual_learners, X_list):
-            meta_features.append(learner.predict(X))
-        meta_features = torch.tensor(np.concatenate(meta_features, axis=1), dtype=torch.float32)
-
-        # Train meta-learner
-        criterion = nn.CrossEntropyLoss()
-        optimizer = optim.Adam(self.meta_learner.parameters(), lr=0.001)
-        # PyTorch training loop for meta-learner here
+        meta_input = torch.cat(individual_outputs, dim=1)
+        return self.meta_learner(meta_input)
 
     def predict(self, X_list):
         meta_features = []
@@ -85,24 +82,31 @@ class AnomalyDetector:
         return self.model.predict(X)
 
 
-class ELAMD_AnomalyDetection:
-    def __init__(self, feature_types, input_sizes, anomaly_method='iforest'):
-        self.individual_learners = [IndividualLearner(ft, is_) for ft, is_ in zip(feature_types, input_sizes)]
-        self.anomaly_detector = AnomalyDetector(method=anomaly_method)
+class ELAMD_AnomalyDetection(nn.Module):
+    def __init__(self, individual_learners, meta_learner, anomaly_detector):
+        super(ELAMD_AnomalyDetection, self).__init__()
+        self.individual_learners = individual_learners
+        self.meta_learner = meta_learner
+        self.anomaly_detector = anomaly_detector
 
-    def fit(self, X_list, y):
-        # Train individual learners
-        for learner, X in zip(self.individual_learners, X_list):
-            learner.fit(X, y)
+    def forward(self, x):
+        individual_outputs = []
+        for learner in self.individual_learners:
+            if isinstance(learner, nn.Module):
+                output = learner(x)
+            else:
+                output = torch.tensor(learner.predict_proba(x.cpu().numpy()), device=x.device)
+            individual_outputs.append(output)
 
-        # Generate meta-features
-        meta_features = []
-        for learner, X in zip(self.individual_learners, X_list):
-            meta_features.append(learner.predict(X))
-        meta_features = np.concatenate(meta_features, axis=1)
+        meta_input = torch.cat(individual_outputs, dim=1)
+        meta_output = self.meta_learner(meta_input)
 
-        # Train anomaly detector
-        self.anomaly_detector.fit(meta_features)
+        if isinstance(self.anomaly_detector, nn.Module):
+            anomaly_output = self.anomaly_detector(meta_output)
+        else:
+            anomaly_output = torch.tensor(self.anomaly_detector.predict(meta_output.detach().cpu().numpy()), device=x.device)
+
+        return meta_output, anomaly_output
 
     def predict(self, X_list):
         meta_features = []
