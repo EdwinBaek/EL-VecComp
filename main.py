@@ -34,7 +34,12 @@ if __name__ == "__main__":
         lief_feature_extractor.main(
             config['dir'][dataset_name]['raw'],
             config['dir'][dataset_name]['lief_features'],
-            label_files=os.listdir(config['dir'][dataset_name]['labels_base'])
+            label_files=[
+                os.path.join(config['dir'][dataset_name]['labels_base'], '1.trainSet.csv'),
+                os.path.join(config['dir'][dataset_name]['labels_base'], '2.preSet.csv'),
+                os.path.join(config['dir'][dataset_name]['labels_base'], '3.finalSet1.csv'),
+                os.path.join(config['dir'][dataset_name]['labels_base'], '4.finalSet2.csv')
+            ]
         )
 
     # Static analysis, dynamic analysis 이후 데이터셋 생성

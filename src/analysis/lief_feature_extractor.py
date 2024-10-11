@@ -49,7 +49,7 @@ def main(pe_directory, output_file, label_files=[]):
     file_paths = [os.path.join(pe_directory, f) for f in os.listdir(pe_directory)]
 
     # Load all label files
-    labels_df = pd.concat([pd.read_csv(f) for f in label_files])
+    labels_df = pd.concat([pd.read_csv(f, header=None, names=['filename', 'label']) for f in label_files])
     labels_dict = dict(zip(labels_df['filename'], labels_df['label']))
 
     for file_path in tqdm(file_paths, desc="Extracting features"):
