@@ -8,7 +8,7 @@ import torch.nn as nn
 from torch import optim
 from torch.utils.data import DataLoader
 from sklearn.ensemble import RandomForestClassifier, IsolationForest
-from ..preprocessing.data_loader import ELAMDDataset, collate_fn
+from ..preprocessing.ELAMD_dataset_loader import ELAMDDataset, collate_fn
 from ..models import MLP, DeepSVDD, SemiDeepSVDD
 from ..models.ELAMD import ELAMD, ELAMD_AnomalyDetection, MetaLearner
 from ..utils.tools import EarlyStopping, adjust_learning_rate, visual

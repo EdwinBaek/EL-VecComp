@@ -7,7 +7,7 @@ import torch
 import torch.nn as nn
 from torch import optim
 from torch.utils.data import DataLoader
-from ..preprocessing.data_loader import ELVecCompDataset, collate_fn
+from ..preprocessing.ELVecComp_dataset_loader import ELVecCompDataset, collate_fn
 from ..models import EL_VecComp, MLP, Transformer, Autoformer, Informer, DLinear, LightTS
 from ..models.RNN import RNN, GRU, LSTM
 from ..utils.tools import EarlyStopping, adjust_learning_rate, visual

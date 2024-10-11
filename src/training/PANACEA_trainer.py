@@ -8,7 +8,7 @@ import torch.nn as nn
 from torch import optim
 from torch.utils.data import DataLoader
 from sklearn.cluster import KMeans
-from ..preprocessing.data_loader import PANACEADataset, collate_fn
+from ..preprocessing.PANACEA_dataset_loader import PANACEADataset, collate_fn
 from ..models import PANACEA, XAI
 from ..utils.tools import EarlyStopping, adjust_learning_rate, visual
 
