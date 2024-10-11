@@ -44,7 +44,10 @@ def extract_features(file_path):
     except:
         return None
 
-def main(pe_directory, output_file, label_files=[]):
+def main(pe_directory, output_dir, label_files=[]):
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+
     all_features = []
     file_paths = [os.path.join(pe_directory, f) for f in os.listdir(pe_directory)]
 
@@ -60,6 +63,7 @@ def main(pe_directory, output_file, label_files=[]):
             features['label'] = labels_dict.get(file_name, -1)  # -1 for unknown label
             all_features.append(features)
 
+    output_file = os.path.join(output_dir, 'ELAMD_LIEF_data.csv')
     df = pd.DataFrame(all_features)
     df.to_csv(output_file, index=False)
     print(f"Features saved to {output_file}")
