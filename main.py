@@ -133,17 +133,7 @@ if __name__ == "__main__":
     elif task_type == 'MOVE_REPORTS':
         dest_dir = config['KISA']['reports_dir']
         src1_dir = os.path.join(config['KISA']['dataset_base_dir'], 'cuckoo_reports_zips_temp/cuckoo_reports_finalset2_1/')
-        src2_dir = os.path.join(config['KISA']['dataset_base_dir'], 'cuckoo_reports_zips_temp/cuckoo_reports_finalset2_2/')
-        src3_dir = os.path.join(config['KISA']['dataset_base_dir'], 'cuckoo_reports_zips_temp/cuckoo_reports_finalset2_3/')
-        src4_dir = os.path.join(config['KISA']['dataset_base_dir'], 'cuckoo_reports_zips_temp/cuckoo_reports_finalset2_4/')
-        src5_dir = os.path.join(config['KISA']['dataset_base_dir'], 'cuckoo_reports_zips_temp/finalset1/')
-        src6_dir = os.path.join(config['KISA']['dataset_base_dir'], 'cuckoo_reports_zips_temp/finalset2/')
         file_utils.move_reports(src1_dir, dest_dir)
-        file_utils.move_reports(src2_dir, dest_dir)
-        file_utils.move_reports(src3_dir, dest_dir)
-        file_utils.move_reports(src4_dir, dest_dir)
-        file_utils.move_reports(src5_dir, dest_dir)
-        file_utils.move_reports(src6_dir, dest_dir)
 
     else:
         print("Select job...")
