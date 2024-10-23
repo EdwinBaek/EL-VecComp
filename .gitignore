@@ -1,9 +1,7 @@
 dataset/
 output/
 config/
-*.yaml
-*.exe
-*.vir
+config.yaml
 
 # IDE-specific files
 .vscode/
@@ -47,11 +45,6 @@ wheels/
 # virtualenv
 venv/
 ENV/
-
-# Dataset files (customize as needed)
-*.csv
-*.json
-*.xlsx
 
 # macOS
 .DS_Store
